@@ -16,17 +16,17 @@ import entity.Item;
 import entity.Item.ItemBuilder;
 
 public class RpcHelper {
-	public static void writeJsonArray(HttpServletResponse response, JSONArray array) throws IOException{
+	public static void writeJsonArray(HttpServletResponse response, JSONArray array) throws IOException {
 		response.setContentType("application/json");
 		response.getWriter().print(array);
 	}
 
-       // Writes a JSONObject to http response.
-	public static void writeJsonObject(HttpServletResponse response, JSONObject obj) throws IOException {		
+	// Writes a JSONObject to http response.
+	public static void writeJsonObject(HttpServletResponse response, JSONObject obj) throws IOException {
 		response.setContentType("application/json");
 		response.getWriter().print(obj);
 	}
-	
+
 	public static JSONObject readJSONObject(HttpServletRequest request) throws IOException {
 		BufferedReader reader = new BufferedReader(new InputStreamReader(request.getInputStream()));
 		StringBuilder requestBody = new StringBuilder();
@@ -36,25 +36,24 @@ public class RpcHelper {
 		}
 		return new JSONObject(requestBody.toString());
 	}
-	
-	 // Convert a JSON object to Item object
-		public static Item parseFavoriteItem(JSONObject favoriteItem) {
-			ItemBuilder builder = new ItemBuilder();
-			builder.setItemId(favoriteItem.getString("item_id"));
-			builder.setName(favoriteItem.getString("name"));
-			builder.setCompany(favoriteItem.getString("company"));
-			builder.setAddress(favoriteItem.getString("address"));
-			builder.setUrl(favoriteItem.getString("url"));
-			builder.setImageUrl(favoriteItem.getString("image_url"));
 
-			Set<String> keywords = new HashSet<>();
-			JSONArray array = favoriteItem.getJSONArray("keywords");
-			for (int i = 0; i < array.length(); ++i) {
-				keywords.add(array.getString(i));
-			}
-			builder.setKeywords(keywords);
-			return builder.build();
+	// Convert a JSON object to Item object
+	public static Item parseFavoriteItem(JSONObject favoriteItem) {
+		ItemBuilder builder = new ItemBuilder();
+		builder.setItemId(favoriteItem.getString("item_id"));
+		builder.setName(favoriteItem.getString("name"));
+		builder.setCompany(favoriteItem.getString("company"));
+		builder.setAddress(favoriteItem.getString("address"));
+		builder.setUrl(favoriteItem.getString("url"));
+		builder.setImageUrl(favoriteItem.getString("image_url"));
+
+		Set<String> keywords = new HashSet<>();
+		JSONArray array = favoriteItem.getJSONArray("keywords");
+		for (int i = 0; i < array.length(); ++i) {
+			keywords.add(array.getString(i));
 		}
-
+		builder.setKeywords(keywords);
+		return builder.build();
+	}
 
 }

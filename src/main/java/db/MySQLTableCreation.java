@@ -1,37 +1,42 @@
 package db;
 
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.Properties;
 
+import util.Config;
+
+
 
 public class MySQLTableCreation {
 	public static void main(String[] args) {
-		
+
 		try {
 			
 			// Load config file
-			InputStream input = new FileInputStream("src/main/resources/config.properties");
+			Config conf = new Config();
+			InputStream input = conf.readConfig();
 			Properties prop = new Properties();
 			prop.load(input);
 			
 			// Fetch url string
 			String url = prop.getProperty("URL");
-			
 			System.out.println("Connecting to " + url);
+			
 			// Step1: Build connection
 			// register a driver
+			
 			Class.forName("com.mysql.cj.jdbc.Driver").getConstructor().newInstance();
+			
 			// build connection
 			Connection conn = DriverManager.getConnection(url);
 			if (conn == null) {
 				return;
 			}
 
-			// Step2: Drop tables in case they exist
+			// Step2: Clear tables in case they exist
 			Statement statement = conn.createStatement();
 			String sql = "DROP TABLE IF EXISTS keywords";
 			statement.executeUpdate(sql);
@@ -47,6 +52,7 @@ public class MySQLTableCreation {
 
 			// Step3: Create new tables
 			sql = "CREATE TABLE items (" + "item_id VARCHAR(255) NOT NULL," + "name VARCHAR(255),"
+					+ "company VARCHAR(255),"
 					+ "address VARCHAR(255)," + "image_url VARCHAR(255)," + "url VARCHAR(255),"
 					+ "PRIMARY KEY (item_id)" + ")";
 			statement.executeUpdate(sql);
@@ -65,6 +71,9 @@ public class MySQLTableCreation {
 					+ "FOREIGN KEY (item_id) REFERENCES items(item_id)" + ")";
 			statement.executeUpdate(sql);
 
+			// Step 4: insert fake user 1111/3229c1097c00d497a0fd282d586be050
+			sql = "INSERT INTO users VALUES('1111', '3229c1097c00d497a0fd282d586be050', 'John', 'Smith')";
+			statement.executeUpdate(sql);
 			conn.close();
 			System.out.println("Import done successfully");
 		} catch (Exception e) {

@@ -1,6 +1,7 @@
 package db;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -10,25 +11,28 @@ import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
+
 import entity.Item;
 import entity.Item.ItemBuilder;
+import util.Config;
 
 public class MySQLConnection {
 	private Connection conn;
 
 	public MySQLConnection() {
 		try {
-			InputStream input = new FileInputStream("src/main/resources/config.properties");
+
+			Config conf = new Config();
+			InputStream input = conf.readConfig();
 			Properties prop = new Properties();
 			prop.load(input);
-			
-			// Fetch url string
-			String url = prop.getProperty("URL");
-			
-			Class.forName("com.mysql.cj.jdbc.Driver").getConstructor().newInstance();
-			conn = DriverManager.getConnection(url);
 
-		} catch (Exception e) {
+			Class.forName("com.mysql.cj.jdbc.Driver").getConstructor().newInstance();
+
+			conn = DriverManager.getConnection(prop.getProperty("URL"));
+		}
+
+		catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -41,6 +45,72 @@ public class MySQLConnection {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	// Add new user
+	public boolean addUser(String userId, String password, String firstname, String lastname) {
+		if (conn == null) {
+			System.err.println("DB connection failed");
+			return false;
+		}
+		String sql = "INSERT IGNORE INTO users VALUES (?, ?, ?, ?)";
+		try {
+			PreparedStatement statement = conn.prepareStatement(sql);
+			statement.setString(1, userId);
+			statement.setString(2, password);
+			statement.setString(3, firstname);
+			statement.setString(4, lastname);
+
+			return statement.executeUpdate() == 1;
+		} catch (SQLException e) {
+			System.out.println("Something is wrong with SQL.");
+		}
+		return false;
+	}
+
+	// Verify login credentials
+	public boolean verifyLogin(String userId, String password) {
+		if (conn == null) {
+			System.out.println("DB connection failed.");
+			return false;
+		}
+		String sql = "SELECT user_id FROM users WHERE user_id = ? AND password = ?";
+		try {
+			PreparedStatement statement = conn.prepareStatement(sql);
+			statement.setString(1, userId);
+			statement.setString(2, password);
+			ResultSet rs = statement.executeQuery();
+			if (rs.next()) {
+				return true;
+			}
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		}
+		return false;
+	}
+
+	public Set<String> getFavoriteItemIds(String userId) {
+		if (conn == null) {
+			System.err.println("DB connection failed");
+			return new HashSet<>();
+		}
+
+		Set<String> favoriteItems = new HashSet<>();
+
+		try {
+			String sql = "SELECT item_id FROM history WHERE user_id = ?";
+			PreparedStatement statement = conn.prepareStatement(sql);
+			statement.setString(1, userId);
+			ResultSet rs = statement.executeQuery();
+			while (rs.next()) {
+				String itemId = rs.getString("item_id");
+				favoriteItems.add(itemId);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return favoriteItems;
 	}
 
 	public void setFavoriteItems(String userId, Item item) {
@@ -81,14 +151,15 @@ public class MySQLConnection {
 			System.err.println("DB connection failed");
 			return;
 		}
-		String sql = "INSERT IGNORE INTO items VALUES (?, ?, ?, ?, ?)";
+		String sql = "INSERT IGNORE INTO items VALUES (?, ?, ?, ?, ?, ?)";
 		try {
 			PreparedStatement statement = conn.prepareStatement(sql);
 			statement.setString(1, item.getItemId());
 			statement.setString(2, item.getName());
-			statement.setString(3, item.getAddress());
-			statement.setString(4, item.getImageUrl());
-			statement.setString(5, item.getUrl());
+			statement.setString(3, item.getCompany());
+			statement.setString(4, item.getAddress());
+			statement.setString(5, item.getImageUrl());
+			statement.setString(6, item.getUrl());
 			statement.executeUpdate();
 
 			sql = "INSERT IGNORE INTO keywords VALUES (?, ?)";
@@ -103,29 +174,6 @@ public class MySQLConnection {
 		}
 	}
 
-	public Set<String> getFavoriteItemIds(String userId) {
-		if (conn == null) {
-			System.err.println("DB connection failed");
-			return new HashSet<>();
-		}
-
-		Set<String> favoriteItems = new HashSet<>();
-
-		try {
-			String sql = "SELECT item_id FROM history WHERE user_id = ?";
-			PreparedStatement statement = conn.prepareStatement(sql);
-			statement.setString(1, userId);
-			ResultSet rs = statement.executeQuery();
-			while (rs.next()) {
-				String itemId = rs.getString("item_id");
-				favoriteItems.add(itemId);
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-		return favoriteItems;
-	}
 	public Set<Item> getFavoriteItems(String userId) {
 		if (conn == null) {
 			System.err.println("DB connection failed");
@@ -145,6 +193,7 @@ public class MySQLConnection {
 				if (rs.next()) {
 					builder.setItemId(rs.getString("item_id"));
 					builder.setName(rs.getString("name"));
+					builder.setCompany(rs.getString("company"));
 					builder.setAddress(rs.getString("address"));
 					builder.setImageUrl(rs.getString("image_url"));
 					builder.setUrl(rs.getString("url"));
@@ -158,7 +207,6 @@ public class MySQLConnection {
 		return favoriteItems;
 	}
 
-	
 	public Set<String> getKeywords(String itemId) {
 		if (conn == null) {
 			System.err.println("DB connection failed");
@@ -181,7 +229,7 @@ public class MySQLConnection {
 	}
 
 	public String getFullname(String userId) {
-		if(conn==null) {
+		if (conn == null) {
 			System.err.println("DB connectionf failed");
 			return "";
 		}
@@ -191,54 +239,12 @@ public class MySQLConnection {
 			PreparedStatement statement = conn.prepareStatement(sql);
 			statement.setString(1, userId);
 			ResultSet rs = statement.executeQuery();
-			if(rs.next()) {
-				name = rs.getString("first_name")+" "+rs.getString("last_name");
+			if (rs.next()) {
+				name = rs.getString("first_name") + " " + rs.getString("last_name");
 			}
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
 		}
 		return name;
-	}
-	
-	
-	public boolean verifyLogin(String userId, String password) {
-		if(conn==null) {
-			System.out.println("DB connection failed");
-			return false;
-		}
-		String sql = "SELECT user_id FROM users WHERE user_id = ? AND password = ?";
-		try {
-			PreparedStatement statement = conn.prepareStatement(sql);
-			statement.setString(1,  userId);
-			statement.setString(2,  password);
-			ResultSet rs = statement.executeQuery();
-			if(rs.next()) {
-				return true;
-			} 
-		} catch(SQLException e) {
-			System.out.println(e.getMessage());
-		}
-		return false;
-	}
-	
-	public boolean addUser(String userId, String password, String firstname, String lastname) {
-		if (conn==null) {
-			System.err.println("DB connection failed");
-			return false;
-		}
-		
-		String sql = "INSERT IGNORE INTO users VALUES (?, ?, ?, ?)";
-		try {
-			PreparedStatement statement = conn.prepareStatement(sql);
-			statement.setString(1,  userId);
-			statement.setString(2, password);
-			statement.setString(3, firstname);
-			statement.setString(4,  lastname);
-			
-			return statement.executeUpdate()==1;
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return false;
 	}
 }

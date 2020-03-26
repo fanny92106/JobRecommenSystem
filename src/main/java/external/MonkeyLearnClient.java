@@ -15,6 +15,8 @@ import com.monkeylearn.MonkeyLearn;
 import com.monkeylearn.MonkeyLearnException;
 import com.monkeylearn.MonkeyLearnResponse;
 
+import util.Config;
+
 public class MonkeyLearnClient {
 
 	public static void main(String[] args) {
@@ -33,15 +35,16 @@ public class MonkeyLearnClient {
 	public static List<List<String>> extractKeywords(String[] text) {
 		if (text == null || text.length == 0) {
 			return new ArrayList<>();
-		}
-
-		try (InputStream input = new FileInputStream("src/main/resources/config.properties")) {
+		};
+		
+	
+		try  {
+			Config conf = new Config();
+			InputStream input = conf.readConfig();
 			Properties prop = new Properties();
 			prop.load(input);
-			String API_KEY = prop.getProperty("MONKEY_LEARN_API_KEY");
 
-			// Use the API key from your account
-			MonkeyLearn ml = new MonkeyLearn(API_KEY);
+			MonkeyLearn ml = new MonkeyLearn(prop.getProperty("MONKEYLEARN_API_KEY"));
 
 			// Use the keyword extractor
 			ExtraParam[] extraParams = { new ExtraParam("max_keywords", "3") };
@@ -51,12 +54,13 @@ public class MonkeyLearnClient {
 			JSONArray resultArray = response.arrayResult;
 			return getKeywords(resultArray);
 
-		} catch (MonkeyLearnException e) {
+		}catch(IOException e) {
+			System.out.println(e.getMessage());
+		}
+		catch (MonkeyLearnException e) {
 			System.out.println(e.getMessage());
 
-		} catch (IOException e) {// it’s likely to have an exception
-			e.printStackTrace();
-		}
+		} 
 		return new ArrayList<>();
 	}
 

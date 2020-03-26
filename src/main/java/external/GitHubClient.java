@@ -1,15 +1,13 @@
 package external;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Properties;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.ClientProtocolException;
@@ -86,22 +84,22 @@ public class GitHubClient {
 	
 	private List<Item> getItemList(JSONArray array) {
 		List<Item> itemList = new ArrayList<>();
-//		List<String> descriptionList = new ArrayList<>();
-//		for (int i = 0; i < array.length(); i++) {
-//			// We need to extract keywords from description since GitHub API
-//			// doesn't return keywords.
-//			String description = getStringFieldOrEmpty(array.getJSONObject(i), "description");
-//			if (description.equals("") || description.equals("\n")) {
-//				descriptionList.add(getStringFieldOrEmpty(array.getJSONObject(i), "title"));
-//			} else {
-//				descriptionList.add(description);
-//			}	
-//		}
-//
-//		// We need to get keywords from multiple text in one request since
-//		// MonkeyLearnAPI has limitation on request per minute.
-//		List<List<String>> keywords = MonkeyLearnClient
-//				.extractKeywords(descriptionList.toArray(new String[descriptionList.size()]));
+		List<String> descriptionList = new ArrayList<>();
+		for (int i = 0; i < array.length(); i++) {
+			// We need to extract keywords from description since GitHub API
+			// doesn't return keywords.
+			String description = getStringFieldOrEmpty(array.getJSONObject(i), "description");
+			if (description.equals("") || description.equals("\n")) {
+				descriptionList.add(getStringFieldOrEmpty(array.getJSONObject(i), "title"));
+			} else {
+				descriptionList.add(description);
+			}	
+		}
+
+		// get keywords from multiple text in one request since
+		// MonkeyLearnAPI has limitation on request per minute.
+		List<List<String>> keywords = MonkeyLearnClient
+				.extractKeywords(descriptionList.toArray(new String[descriptionList.size()]));
 		
 		for (int i=0; i<array.length(); i++) {
 			JSONObject object = array.getJSONObject(i);
@@ -112,7 +110,7 @@ public class GitHubClient {
 			builder.setAddress(getStringFieldOrEmpty(object, "location"));
 			builder.setUrl(getStringFieldOrEmpty(object, "url"));
 			builder.setImageUrl(getStringFieldOrEmpty(object, "company_logo"));
-//			builder.setKeywords(new HashSet<String>(keywords.get(i)));
+			builder.setKeywords(new HashSet<String>(keywords.get(i)));
 			itemList.add(builder.build());
 		}
 		

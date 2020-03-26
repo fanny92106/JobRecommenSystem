@@ -57,11 +57,12 @@ public class ItemHistory extends HttpServlet {
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		MySQLConnection connection = new MySQLConnection();
+		
 		JSONObject input = RpcHelper.readJSONObject(request);
 		String userId = input.getString("user_id");
 		Item item = RpcHelper.parseFavoriteItem(input.getJSONObject("favorite"));
 
+		MySQLConnection connection = new MySQLConnection();
 		connection.setFavoriteItems(userId, item);
 		connection.close();
 		RpcHelper.writeJsonObject(response, new JSONObject().put("result", "SUCCESS"));
